@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "expo-video-converter",
+    "slug": "expo-video-converter",
+    "version": "0.1.0",
+    "description": "Expo Video Converter Module",
+    "sdkVersion": "49.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  }
+}

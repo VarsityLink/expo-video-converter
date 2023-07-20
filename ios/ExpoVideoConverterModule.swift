@@ -1,44 +1,120 @@
 import ExpoModulesCore
+import Foundation
+import AVFoundation
+import NextLevelSessionExporter
 
 public class ExpoVideoConverterModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+  private var transcodersRunning: NSMutableArray = NSMutableArray()
+  private let E_CREATE_FILE_ERROR: String = "E_CREATE_FILE_ERROR"
+  private let E_CONVERSION_ERROR: String = "E_CONVERSION_ERROR"
+  private let E_CONVERSION_CANCELLED: String = "E_CONVERSION_CANCELLED"
+
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoVideoConverter')` in JavaScript.
     Name("ExpoVideoConverter")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants([
-      "PI": Double.pi
-    ])
+    AsyncFunction("convert") { (config: Config, promise: Promise) in
+      do {
+        let mediaAssetSourceUrl = try URL(fileURLWithPath: config.sourcePath)
+        let mediaAssetOutputUrl = try URL(fileURLWithPath: config.outputPath)
+        let mediaSourceAsset: AVAsset = AVAsset(url: mediaAssetSourceUrl)
+        
+        let clipStart = CMTimeMakeWithSeconds(config.trimStart, preferredTimescale: 600)
+        let clipEnd = CMTimeMakeWithSeconds(config.trimEnd, preferredTimescale: 600)
+        
+        let exporter = NextLevelSessionExporter(withAsset: mediaSourceAsset)
+        exporter.outputURL = mediaAssetOutputUrl
+      
+        let compressionDict: [String: Any] = [
+          AVVideoAverageBitRateKey: config.videoBitrate,
+          AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel as String,
+          AVVideoAverageNonDroppableFrameRateKey: config.frameRate,
+        ]
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+        exporter.videoOutputConfiguration = [
+          AVVideoCodecKey: AVVideoCodecType.h264,
+          AVVideoWidthKey: config.width,
+          AVVideoHeightKey: config.height,
+          AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,
+          AVVideoCompressionPropertiesKey: compressionDict
+        ]
+      
+        exporter.audioOutputConfiguration = [
+          AVFormatIDKey: kAudioFormatMPEG4AAC,
+          AVEncoderBitRateKey: config.audioBitrate,
+          AVSampleRateKey: NSNumber(value: Float(44100)),
+          AVNumberOfChannelsKey: config.audioChannels
+        ]
+        
+        if(clipEnd != CMTime.zero){
+          exporter.timeRange = CMTimeRangeMake(start: clipStart, duration: clipEnd)
+        }
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
-    }
+        exporter.outputFileType = AVFileType.mp4
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoVideoConverterView.self) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { (view: ExpoVideoConverterView, prop: String) in
-        print(prop)
+        exporter.export(progressHandler: { (progress) in
+          print(progress)
+        }, completionHandler: { result in
+          switch result {
+            case .success(let status):
+              switch status {
+              case .completed:
+                print("NextLevelSessionExporter, export completed, \(exporter.outputURL?.description ?? "")")
+                let map: NSDictionary = ["uri": config.outputPath]
+                promise.resolve(map)
+                break
+              default:
+                let map: NSDictionary = ["isCancelled": true]
+                promise.resolve(map)
+                print("NextLevelSessionExporter, did not complete")
+                break
+          }
+          break
+          case .failure(let error):
+            print("NextLevelSessionExporter, failed to export \(error)")
+            let map: NSDictionary = ["error": true]
+            promise.resolve(map)
+            break
+          }
+        })
+      } catch {
+        let map: NSDictionary = ["error": true]
+        promise.resolve(map)
       }
     }
   }
+}
+
+struct Config : Record {
+  @Field
+  var id: Int = 0
+
+  @Field
+  var sourcePath: String = ""
+
+  @Field
+  var outputPath: String = ""
+
+  @Field
+  var width: Int = 0
+
+  @Field
+  var height: Int = 0
+
+  @Field
+  var frameRate: Int = 0
+
+  @Field
+  var videoBitrate: UInt32 = 0
+
+  @Field
+  var audioBitrate: UInt32 = 0
+
+  @Field
+  var audioChannels: Int = 0
+
+  @Field
+  var trimStart: Double = 0.0
+
+  @Field
+  var trimEnd: Double = 0.0
 }
