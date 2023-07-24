@@ -104,10 +104,10 @@ struct Config : Record {
   var frameRate: Double = 0
 
   @Field
-  var videoBitrate: UInt32 = 0
+  var videoBitrate: Double = 0.0
 
   @Field
-  var audioBitrate: UInt32 = 0
+  var audioBitrate: Double = 0.0
 
   @Field
   var audioChannels: Int = 0
