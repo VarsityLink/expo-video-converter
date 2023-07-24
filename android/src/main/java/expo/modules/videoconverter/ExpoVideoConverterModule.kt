@@ -83,7 +83,7 @@ class ExpoVideoConverterModule : Module() {
         }
 
         override fun onTranscodeFailed(e: Throwable) {
-          promise.resolve(null)
+          promise.resolve(e)
         }
       }
 
@@ -95,7 +95,7 @@ class ExpoVideoConverterModule : Module() {
         .transcode()
     }
     catch(e: Exception) {
-      promise.resolve(null)
+      promise.resolve(e)
     }
   }
 }
