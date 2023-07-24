@@ -86,5 +86,5 @@ repositories {
 dependencies {
   implementation project(':expo-modules-core')
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
-  api("com.otaliastudios:transcoder:0.10.4")
+  api("com.otaliastudios:transcoder:0.10.6")
 }
