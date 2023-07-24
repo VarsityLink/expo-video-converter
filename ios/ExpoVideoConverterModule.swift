@@ -95,13 +95,13 @@ struct Config : Record {
   var outputPath: String = ""
 
   @Field
-  var width: Int = 0
+  var width: Double = 0
 
   @Field
-  var height: Int = 0
+  var height: Double = 0
 
   @Field
-  var frameRate: Int = 0
+  var frameRate: Double = 0
 
   @Field
   var videoBitrate: UInt32 = 0

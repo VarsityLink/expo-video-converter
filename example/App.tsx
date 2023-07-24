@@ -5,7 +5,6 @@ import * as ExpoVideoConverter from "expo-video-converter";
 import RNFS, { stat } from "react-native-fs";
 
 export default function App() {
-  // const [image, setImage] = useState<null | string>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [convertedRes, setConvertedRes] = useState<string>("");
 
